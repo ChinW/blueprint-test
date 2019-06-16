@@ -28,6 +28,7 @@ browserSync({
       webpackDevMiddleware(bundler, {
         // Dev middleware can't access config, so we provide publicPath
         publicPath: config.output.publicPath,
+        contentBase: config.output.publicPath,
 
         // These settings suppress noisy webpack output so only errors are displayed to the console.
         noInfo: true,
@@ -51,9 +52,11 @@ browserSync({
     ]
   },
 
+
   // no need to watch '*.js' here, webpack will take care of it for us,
   // including full page reloads if HMR won't work
   files: [
-    'src/*.html'
+    'src/*.html',
+
   ]
 });

@@ -4,6 +4,7 @@ import webpack from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import path from 'path';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 
 const GLOBALS = {
   'process.env.NODE_ENV': JSON.stringify('production'),
@@ -31,7 +32,13 @@ export default {
     new MiniCssExtractPlugin({
       filename: '[name].[contenthash].css'
     }),
-
+    new CopyWebpackPlugin([
+      {
+        from: './node_modules/@microsoft/office-js/dist/office.js',
+        to: '/office.js',
+        // toType: 'dir'
+      }
+    ]),
     // Generate HTML file that contains references to generated bundles. See here for how this works: https://github.com/ampedandwired/html-webpack-plugin#basic-usage
     new HtmlWebpackPlugin({
       template: 'src/index.ejs',
