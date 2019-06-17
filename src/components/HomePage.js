@@ -15,14 +15,16 @@ const findPrevNode = (current, prev, index) => {
       return {
         prevBookName: prevEndBookName,
         prevNodeID: `node-${prevEndBookName}-${2 * index}`,
-        shouldAddNode: false
+        shouldAddNode: false,
+        sameNode: true
       };
     }
   }
   return {
     prevBookName: currentStartBookName,
     prevNodeID: `node-${currentStartBookName}-${2 * (index + 1) - 1}`,
-    shouldAddNode: true
+    shouldAddNode: true,
+    sameNode: false
   };
 };
 
@@ -34,58 +36,88 @@ export class HomePage extends React.Component {
       })
       .then(function(actions) {
         require("sigma/build/plugins/sigma.renderers.edgeLabels.min");
+        require("sigma/build/plugins/sigma.renderers.parallelEdges.min");
         console.log(actions);
         const s = new sigma("container");
         let nodeCount = 0;
+        let edgeCount = 0;
+        let nodeList = [];
         actions.forEach((action, actionIndex) => {
           const { currentBook, quantityDiff, timestamp } = action;
-          const { prevBookName, prevNodeID, shouldAddNode } = findPrevNode(
-            action,
-            actions[actionIndex - 1],
-            actionIndex
-          );
+          let prevNode = nodeList[nodeList.length - 1];
 
-          const currentBookName = decodeURIComponent(
-            currentBook.substr(currentBook.indexOf("#") + 1)
-          );
-          const currentNodeID = `node-${currentBookName}-${2 *
-            (actionIndex + 1)}`;
-          if (shouldAddNode) {
+          if (!prevNode) {
+            prevNode = {
+              bookName: getBookName(action.prevBook),
+              nodeID: `node-${getBookName(action.prevBook)}-${nodeCount++}`
+            };
+            nodeList.push(prevNode);
+
             s.graph.addNode({
-              id: prevNodeID,
-              label: prevBookName,
-              x: nodeCount * 5 + 5,
+              id: prevNode.nodeID,
+              label: prevNode.bookName,
+              x: nodeList.length * 10 + 10,
+              y: 10,
+              size: 1,
+              color: "#f00"
+            });
+          }
+          console.log("prevNode", prevNode);
+          const { bookName: prevBookName, nodeID: prevNodeID } = prevNode; //findPrevNode(action, actions[actionIndex - 1], actionIndex);
+
+          const currentBookName = getBookName(currentBook);
+          const currentNodeID = `node-${currentBookName}-${nodeCount++}`;
+          if (prevBookName === currentBookName) {
+            // point to self
+            s.graph.addEdge({
+              id: `edge-${prevNodeID}-${prevNodeID}-${edgeCount++}`,
+              source: prevNodeID,
+              target: prevNodeID,
+              label: `${timestamp}, ${quantityDiff}`,
+              type: "curvedArrow",
+              size: 1,
+              count: edgeCount
+            });
+          } else {
+            const newNode = {
+              bookName: currentBookName,
+              nodeID: currentNodeID
+            };
+            nodeList.push(newNode);
+
+            s.graph.addNode({
+              id: newNode.nodeID,
+              label: newNode.bookName,
+              x: nodeList.length * 10 + 10,
               y: 10,
               size: 1,
               color: "#f00"
             });
             nodeCount++;
+
+            s.graph.addEdge({
+              id: `edge-${prevBookName}-${currentBookName}-${edgeCount++}`,
+              source: prevNodeID,
+              target: currentNodeID,
+              label: `${timestamp}, ${quantityDiff}`,
+              type: "curvedArrow",
+              size: 1
+            });
           }
-          s.graph.addNode({
-            id: currentNodeID,
-            label: currentBookName,
-            x: nodeCount * 5 + 5,
-            y: 10,
-            size: 1,
-            color: "#f00"
-          });
-          nodeCount++;
-          console.log(
-            `edge-${prevBookName}-${currentBookName}-${actionIndex}`,
-            prevNodeID,
-            currentNodeID
-          );
-          s.graph.addEdge({
-            id: `edge-${prevBookName}-${currentBookName}-${actionIndex}`,
-            source: prevNodeID,
-            target: currentNodeID,
-            label: `${timestamp}, ${quantityDiff}`
-          });
+
+          // console.log(
+          //   `edge-${prevBookName}-${currentBookName}-${nodeCount}`,
+          //   prevNodeID,
+          //   currentNodeID
+          // );
         });
 
         s.settings({
           edgeColor: "default",
-          defaultEdgeColor: "#999"
+          defaultEdgeColor: "#ccc"
+          // defaultEdgeType: "arrow",
+          // minEdgeSize: 0.5,
+          // maxEdgeSize: 1
         });
 
         s.refresh();
